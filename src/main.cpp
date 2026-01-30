@@ -9,7 +9,7 @@
 
 #include "stitcher.h"
 
-struct args { bool debug_mode = false; std::vector<int> exclude; };
+struct args { std::vector<int> exclude; };
 
 void parse_exclude_list(const std::string &value, std::vector<int> &out) {
   size_t start = 0;
@@ -26,8 +26,7 @@ args parse_args(int argc, char **argv) {
   args parsed;
   for (int i = 1; i < argc; ++i) {
     const std::string token = argv[i];
-    if (token == "--debug") { parsed.debug_mode = true; }
-    else if (token == "--exclude" && i + 1 < argc) { parse_exclude_list(argv[++i], parsed.exclude); }
+    if (token == "--exclude" && i + 1 < argc) { parse_exclude_list(argv[++i], parsed.exclude); }
   }
   return parsed;
 }
@@ -52,17 +51,6 @@ std::vector<std::pair<int, std::filesystem::path>> list_images(const std::string
   return ordered;
 }
 
-cv::Mat concat_horizontal(const std::vector<cv::Mat> &images) {
-  if (images.empty()) { return {}; }
-  int total_w = 0;
-  int max_h = 0;
-  for (const auto &img : images) { total_w += img.cols; max_h = std::max(max_h, img.rows); }
-  cv::Mat canvas(max_h, total_w, CV_8UC3, cv::Scalar(0, 0, 0));
-  int x = 0;
-  for (const auto &img : images) { const cv::Rect dst(x, 0, img.cols, img.rows); img.copyTo(canvas(dst)); x += img.cols; }
-  return canvas;
-}
-
 int main(int argc, char **argv) {
   const args parsed = parse_args(argc, argv);
   const std::string input_dir = "input";
@@ -77,13 +65,6 @@ int main(int argc, char **argv) {
     if (img.empty()) { std::cerr << "Failed to read image: " << f.second << std::endl; return 1; }
     images.push_back(img);
     indices.push_back(f.first);
-  }
-  if (parsed.debug_mode) {
-    const cv::Mat canvas = concat_horizontal(images);
-    const std::string out_path = "output/debug_sequence.jpg";
-    if (!cv::imwrite(out_path, canvas)) { std::cerr << "Failed to write output image: " << out_path << std::endl; return 1; }
-    std::cout << "Saved debug image to " << out_path << std::endl;
-    return 0;
   }
   Stitcher stitcher;
   const cv::Mat canvas = stitcher.stitch_sequence(images, indices);

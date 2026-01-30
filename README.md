@@ -24,7 +24,6 @@ make run
 Исключить кадры (список через запятую):
 ```bash
 ./build/zifra --exclude 3,4
-./build/zifra --debug --exclude 3,4
 ```
 
 Результаты:
